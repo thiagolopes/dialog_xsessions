@@ -32,6 +32,10 @@ from collections import OrderedDict
 
 XSESSIONS_PATH = "/usr/share/xsessions"
 WAYLAND_SESSIONS_PATH = "/usr/share/wayland-sessions"
+DIALOG_CMD = "dialog"
+WAYLAND_SETUP = "XDG_SESSION_TYPE=wayland dbus-run-session"
+XORG_SETUP = "startx"
+SPC = " "
 
 def sanitaze_relative_path(path):
     absolute_path = shutil.which(path)
@@ -44,7 +48,7 @@ class DialogMenu:
     A class for creating and displaying a dialog menu using the 'dialog' command-line tool.
     """
     def __init__(self, title, header, width, height, lines=0):
-        self.cmd = f"dialog;--title;{title};--menu;{header};{height};{width};{lines}".split(";")
+        self.cmd = f"{DIALOG_CMD};--title;{title};--menu;{header};{height};{width};{lines}".split(";")
 
     def enumarate_options(self, options):
         return [str(item) for sublist in enumerate(options) for item in sublist]
@@ -65,18 +69,24 @@ class DialogMenu:
 
 
 if __name__ == "__main__":
+    if sanitaze_relative_path(DIALOG_CMD) == DIALOG_CMD:
+        print(f"{DIALOG_CMD=} not found", file=sys.stderr)
+        sys.exit(1)
+
     menu = DialogMenu("Menu", "Select the desktop:", 60, 10)
     cp = configparser.ConfigParser()
-
     x_sessions_files = [f"{XSESSIONS_PATH}/{f}" for f in os.listdir(XSESSIONS_PATH)]
-    # wayland_files = [f"{WAYLAND_SESSIONS_PATH}/{f}" for f in os.listdir(WAYLAND_SESSIONS_PATH)]
+    wayland_files = [f"{WAYLAND_SESSIONS_PATH}/{f}" for f in os.listdir(WAYLAND_SESSIONS_PATH)]
 
     sessions_available = OrderedDict()
-    for session in x_sessions_files:
-        cp.read(session)
-        sessions_available[cp["Desktop Entry"]["Name"]] = cp["Desktop Entry"]["Exec"]
+    for file_path in x_sessions_files:
+        cp.read(file_path)
+        sessions_available[cp["Desktop Entry"]["Name"]] = XORG_SETUP + SPC + cp["Desktop Entry"]["Exec"]
+    for file_path in wayland_files:
+        cp.read(file_path)
+        sessions_available[cp["Desktop Entry"]["Name"]] = WAYLAND_SETUP + SPC + cp["Desktop Entry"]["Exec"]
 
     menu_result = menu.ask(list(sessions_available.keys()))
     executable = sessions_available[menu_result]
 
-    print("startx " + sanitaze_relative_path(executable), flush=True) # stdout
+    print(sanitaze_relative_path(executable), flush=True) # stdout
