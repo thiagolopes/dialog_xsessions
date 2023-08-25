@@ -33,15 +33,10 @@ from collections import OrderedDict
 XSESSIONS_PATH = "/usr/share/xsessions"
 WAYLAND_SESSIONS_PATH = "/usr/share/wayland-sessions"
 DIALOG_CMD = "dialog"
-WAYLAND_SETUP = "XDG_SESSION_TYPE=wayland dbus-run-session"
-XORG_SETUP = "startx"
 SPC = " "
+WAYLAND_SETUP = "XDG_SESSION_TYPE=wayland dbus-run-session" + SPC
+XORG_SETUP = "startx" + SPC
 
-def sanitaze_relative_path(path):
-    absolute_path = shutil.which(path)
-    if not absolute_path:
-        return path
-    return absolute_path
 
 class DialogMenu:
     """
@@ -67,26 +62,40 @@ class DialogMenu:
         temp_output.close()
         return options[resp]
 
+class DesktopParser:
+    cp = configparser.ConfigParser()
+
+    def read(self, file_path):
+        self.cp.read(file_path)
+        humable_name = self.cp["Desktop Entry"]["Name"]
+        executable = self.cp["Desktop Entry"]["Exec"]
+        executable = self.get_absolute_path(executable) or executable
+        return humable_name, executable
+
+    def get_absolute_path(self, binary):
+        path = shutil.which(binary)
+        if not path:
+            return None
+        return path
 
 if __name__ == "__main__":
-    if sanitaze_relative_path(DIALOG_CMD) == DIALOG_CMD:
+    dp = DesktopParser()
+    if not dp.get_absolute_path(DIALOG_CMD):
         print(f"{DIALOG_CMD=} not found", file=sys.stderr)
         sys.exit(1)
 
     menu = DialogMenu("Menu", "Select the desktop:", 60, 10)
-    cp = configparser.ConfigParser()
     x_sessions_files = [f"{XSESSIONS_PATH}/{f}" for f in os.listdir(XSESSIONS_PATH)]
     wayland_files = [f"{WAYLAND_SESSIONS_PATH}/{f}" for f in os.listdir(WAYLAND_SESSIONS_PATH)]
-
     sessions_available = OrderedDict()
-    for file_path in x_sessions_files:
-        cp.read(file_path)
-        sessions_available[cp["Desktop Entry"]["Name"]] = XORG_SETUP + SPC + sanitaze_relative_path(cp["Desktop Entry"]["Exec"])
-    for file_path in wayland_files:
-        cp.read(file_path)
-        sessions_available[cp["Desktop Entry"]["Name"]] = WAYLAND_SETUP + SPC + sanitaze_relative_path(cp["Desktop Entry"]["Exec"])
+
+    for xfile in x_sessions_files:
+        xhumable_name, xexecutable = dp.read(xfile)
+        sessions_available[xhumable_name] = XORG_SETUP + xexecutable
+    for wfile in wayland_files:
+        whumable_name, wexecutable = dp.read(wfile)
+        sessions_available[whumable_name] = WAYLAND_SETUP + wexecutable
 
     menu_result = menu.ask(list(sessions_available.keys()))
-    executable = sessions_available[menu_result]
-
-    print(executable, flush=True) # stdout
+    choice = sessions_available[menu_result]
+    print(choice, flush=True) # stdout
