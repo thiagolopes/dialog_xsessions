@@ -81,12 +81,12 @@ if __name__ == "__main__":
     sessions_available = OrderedDict()
     for file_path in x_sessions_files:
         cp.read(file_path)
-        sessions_available[cp["Desktop Entry"]["Name"]] = XORG_SETUP + SPC + cp["Desktop Entry"]["Exec"]
+        sessions_available[cp["Desktop Entry"]["Name"]] = XORG_SETUP + SPC + sanitaze_relative_path(cp["Desktop Entry"]["Exec"])
     for file_path in wayland_files:
         cp.read(file_path)
-        sessions_available[cp["Desktop Entry"]["Name"]] = WAYLAND_SETUP + SPC + cp["Desktop Entry"]["Exec"]
+        sessions_available[cp["Desktop Entry"]["Name"]] = WAYLAND_SETUP + SPC + sanitaze_relative_path(cp["Desktop Entry"]["Exec"])
 
     menu_result = menu.ask(list(sessions_available.keys()))
     executable = sessions_available[menu_result]
 
-    print(sanitaze_relative_path(executable), flush=True) # stdout
+    print(executable, flush=True) # stdout
