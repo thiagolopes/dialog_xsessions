@@ -35,7 +35,7 @@ WAYLAND_SESSIONS_PATH = "/usr/share/wayland-sessions"
 DIALOG_CMD = "dialog"
 SPC = " "
 WAYLAND_SETUP = "XDG_SESSION_TYPE=wayland dbus-run-session" + SPC
-XORG_SETUP = "startx" + SPC
+XORG_SETUP = "XDG_SESSION_TYPE=x11 startx" + SPC
 
 
 class DialogMenu:
